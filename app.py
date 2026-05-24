@@ -43,7 +43,7 @@ def main():
 
     print("PPT 생성...")
     export_ppt(
-        important,
+        classified,
         contributions,
         timeline
     )
