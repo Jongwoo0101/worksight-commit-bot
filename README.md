@@ -1,13 +1,12 @@
 # WorkSight Commit Bot
 
 > GitHub 커밋 로그를 자동 분석하여  
-> **개발 과정 요약, 팀원 기여도, 타임라인, PPT 보고서**를 생성하는 AI 기반 기획 보조 도구
+> **개발 과정 요약, 팀원 기여도, 타임라인, PPT 보고서**를 생성하고,  
+> **새로운 변경사항을 지속적으로 추적하는 AI 기반 기획 보조 도구**
 
 ---
 
 ## Overview
-
-프로젝트 발표나 PPT 제작 시, GitHub의 수많은 커밋 로그를 직접 읽고 정리하는 것은 많은 시간이 듭니다.
 
 **WorkSight Commit Bot**은 GitHub Repository의 커밋 내역을 자동 수집하고 분석하여:
 
@@ -17,8 +16,9 @@
 - 개발 타임라인 생성
 - CSV 보고서 생성
 - PPT 자동 생성
+- 새로운 커밋만 자동 감지 및 누적 저장
+- 변경 로그 기반 자동 커밋 메시지 생성
 
-까지 한 번에 수행합니다.
 
 ---
 
@@ -38,7 +38,26 @@ GitHub Repository의 커밋 내역을 자동 수집합니다.
 
 ---
 
-### 2. Commit Classification
+### 2. Incremental Update Tracking
+
+처음 실행 시 전체 커밋을 저장하고,  
+이후 실행부터는 **새롭게 추가된 커밋만 감지**합니다.
+
+```text
+처음 실행 → 169개 저장
+다음 실행 → 새 커밋 2개 발견
+결과 → 총 171개 유지
+```
+
+내부적으로 마지막 처리한 SHA를 저장합니다.
+
+```text
+state/last_sha.txt
+```
+
+---
+
+### 3. Commit Classification
 
 커밋 메시지를 자동 분류합니다.
 
@@ -53,7 +72,7 @@ GitHub Repository의 커밋 내역을 자동 수집합니다.
 
 ---
 
-### 3. Important Commit Filtering
+### 4. Important Commit Filtering
 
 중요한 커밋만 자동 추출합니다.
 
@@ -71,21 +90,21 @@ GitHub Repository의 커밋 내역을 자동 수집합니다.
 
 ---
 
-### 4. Contribution Analysis
+### 5. Contribution Analysis
 
 팀원별 커밋 수를 분석합니다.
 
 예시:
 
 ```text
-WonJongU: 52 commits
+원종우: 52 commits
 TeammateA: 31 commits
 TeammateB: 18 commits
 ```
 
 ---
 
-### 5. Development Timeline
+### 6. Development Timeline
 
 날짜별 커밋을 기반으로 개발 흐름을 자동 생성합니다.
 
@@ -99,9 +118,11 @@ TeammateB: 18 commits
 
 ---
 
-### 6. CSV Export
+### 7. CSV Export
 
 분석 결과를 CSV로 저장합니다.
+
+기존 데이터를 유지하면서 **새 커밋만 append**합니다.
 
 생성 파일:
 
@@ -111,7 +132,7 @@ data/commit_report.csv
 
 ---
 
-### 7. PPT Report Generation
+### 8. PPT Report Generation
 
 프로젝트 발표용 PPT를 자동 생성합니다.
 
@@ -131,7 +152,22 @@ data/commit_report.pptx
 
 ---
 
-### 8. Streamlit Web UI
+### 9. Auto Changelog Commit 
+
+새로운 변경사항이 감지되면,  
+**WorkSight Commit Bot 자체 레포에도 자동으로 커밋**합니다.
+
+예시:
+
+```text
+feat: target repo 신규 커밋 3건 반영
+- fix: handleJoinRoom bug 작성자: 원종우 코드: a3f91bc
+- feat: refresh token 작성자: 원종우 코드: b72de11
+```
+
+---
+
+### 10. Streamlit Web UI
 
 브라우저에서 GitHub Repository URL만 입력하면 자동 생성 가능합니다.
 
@@ -151,8 +187,13 @@ worksight-commit-bot/
 │   ├── timeline_analyzer.py
 │   ├── important_filter.py
 │   ├── csv_exporter.py
-│   └── ppt_exporter.py
-└── data/
+│   ├── ppt_exporter.py
+│   ├── state_manager.py
+│   ├── changelog_generator.py
+│   └── git_auto_commit.py
+├── data/
+└── state/
+    └── last_sha.txt
 ```
 
 ---
@@ -218,50 +259,31 @@ streamlit run ui.py
 
 ---
 
-## Tech Stack
+## Workflow
 
-### Language
-
-- Python 3.11
-
-### Libraries
-
-- PyGithub
-- pandas
-- python-pptx
-- streamlit
-
----
-
-## Example Output
-
-### CSV
-
-```csv
-date,author,category,summary
-2026-05-20,Won,버그 수정,handleJoinRoom 오류 수정
-2026-05-21,Won,기능 개발,화상회의 기능 구현
+```text
+Target Repository 변경 감지
+        ↓
+새 커밋 수집
+        ↓
+커밋 분류 및 분석
+        ↓
+CSV / PPT 업데이트
+        ↓
+last_sha 저장
+        ↓
+WorkSight Commit Bot 자동 커밋
 ```
 
 ---
 
-### PPT
+## Tech Stack
 
-자동 생성되는 발표 자료 예시:
+<p align="left">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="50" height="50"/>
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg" width="50" height="50"/>
+  <img src="https://streamlit.io/images/brand/streamlit-mark-color.png" width="50" height="50"/>
+  <img src="https://cdn-icons-png.flaticon.com/512/888/888871.png" width="50" height="50"/>
+  <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" width="50" height="50"/>
+</p>
 
-- 개발 과정 요약
-- 팀원 기여도
-- 개발 타임라인
-- 중요 커밋 정리
-
----
-
-## Future Improvements
-
-- GitHub Pull Request 상세 분석
-- Commit Keyword 기반 기능별 그룹화
-- 커밋 메시지 자연어 요약 AI
-- GitLab 지원
-- Notion Export
-- Jira Integration
-- PPT 디자인 템플릿 개선
