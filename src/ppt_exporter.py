@@ -1,18 +1,22 @@
 import os
+import pandas as pd
 from pptx import Presentation
 
 
-def export_ppt(commits, contributions, timeline):
+def export_ppt(contributions, timeline):
     os.makedirs("data", exist_ok=True)
+
+    # 누적 CSV 읽기
+    df = pd.read_csv("data/commit_report.csv")
 
     prs = Presentation()
 
-    # 제목
+    # 1. 제목 슬라이드
     slide = prs.slides.add_slide(prs.slide_layouts[0])
     slide.shapes.title.text = "개발 과정 요약"
     slide.placeholders[1].text = "GitHub Commit 기반 자동 생성"
 
-    # 팀원 기여도
+    # 2. 팀원 기여도
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     slide.shapes.title.text = "팀원 기여도"
 
@@ -22,7 +26,7 @@ def export_ppt(commits, contributions, timeline):
 
     slide.placeholders[1].text = text
 
-    # 타임라인
+    # 3. 개발 타임라인
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     slide.shapes.title.text = "개발 타임라인"
 
@@ -33,8 +37,8 @@ def export_ppt(commits, contributions, timeline):
 
     slide.placeholders[1].text = text
 
-    # 중요 커밋
-    for commit in commits[:10]:
+    # 4. 커밋별 슬라이드 (전체!)
+    for _, commit in df.iterrows():
         slide = prs.slides.add_slide(prs.slide_layouts[1])
 
         title = commit["category"]
@@ -45,9 +49,10 @@ def export_ppt(commits, contributions, timeline):
         slide.shapes.title.text = title
 
         body = (
-            f"{commit['date']}\n"
-            f"{commit['author']}\n"
-            f"{commit['summary']}"
+            f"날짜: {commit['date']}\n"
+            f"작성자: {commit['author']}\n"
+            f"요약: {commit['summary']}\n"
+            f"SHA: {commit['sha']}"
         )
 
         slide.placeholders[1].text = body
