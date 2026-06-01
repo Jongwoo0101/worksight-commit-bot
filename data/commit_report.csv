@@ -1,57 +1,91 @@
 ﻿date,author,category,summary,sha,is_merge
-2026-05-31,원종우,문서 작업,"새 브렌치 변경사항 기준 기존 브랜치와의 통합
-- docs 디렉토리 내의 3 영역 (프론트, 백, ai)에 새 브랜치 (docs/specifications)와 통합",198679d,False
-2026-05-31,원종우,구조 개선,"refactor(domain): 워크로그/상태/알림 도메인 리팩토링 및 쿼리 최적화
+2026-06-01,원종우,버그 수정,"fix(nav): 다중 팀 환경 네비게이션 바 채팅방 라우팅 버그 수정
 
-- WorkLog 엔티티에 당일 중복 출근 방지용 유니크 제약조건(member_id, work_date) 추가 및 WorkLogService 로직 간소화
-- NotificationRepository에 bulkMarkAllAsRead() 쿼리를 추가하여 전체 읽음 처리 시 발생하는 N+1 UPDATE 쿼리 성능 이슈 해결
-- MemberStatusRepository의 쿼리를 teamId 기반으로 변경하여 관리자 본인의 상태도 정상적으로 조회되도록 수정
-- application.yaml에 CORS allowed-origins 속성 외부화 반영",8d620e7,False
-2026-05-31,dldnwls07,기타,chore: remove obsolete documentation and project planning files,c7a438b,False
+- Navbar 컴포넌트에서 ""메시지"" 버튼 클릭 시 무조건 배열의 첫 번째 팀(teams[0]) 채팅방으로 이동하던 하드코딩 로직 제거
+- 현재 URL 경로의 param, 직원의 실제 소속 팀(memberTeamMap)을 우선적으로 판별하여 정확한 팀의 채팅방 URL을 생성하도록 개선",f836fb2,False
+2026-06-01,원종우,버그 수정,"fix(meeting): 다중 팀 환경 회의실 목록 조회 409 에러 및 데이터 꼬임 버그 수정
+
+- [Backend] MeetingRoomController 및 MeetingRoomService의 조회 로직에 teamId 파라미터를 추가하여 명시된 팀의 회의실만 반환하도록 수정
+- [Frontend] api.ts(getMeetings) 및 videoCallStore(loadRooms)에서 API 호출 시 teamId를 Query String으로 전달하도록 개선
+- [Frontend] useMeetingRoomController에서 현재 컨텍스트의 활성화된 팀 ID를 파악하여 명시적으로 백엔드에 요청하도록 수정 (무조건 첫 번째 팀을 가져오던 로직 제거)",e2c8b13,False
+2026-05-31,원종우,구조 개선,"refactor(chat): 채팅방 구조 개선 및 동시성(Race Condition) 방어 로직 구현
+
+- ChatRoom 엔티티의 managerId 컬럼을 teamId로 변경하고, DB 유니크 제약조건(member1_id, member2_id) 추가
+- ChatService에 DataIntegrityViolationException 예외 복구 로직을 추가하여 DIRECT 채팅방 동시 생성 요청 시 발생하는 중복 버그 방어
+- TEAM 채팅방 메시지 브로드캐스트 시 Member N+1 쿼리 문제를 해결하기 위해 findActiveMemberIds 최적화 적용",07487b0,False
+2026-05-31,dldnwls07,기타,"Merge pull request #9 from Jongwoo0101/chat_frontend
+
+Refactor: 팀 도메인 독립 구조(Team Entity) 개편 및 전역 예외/웹소켓 인증 고도화",ff38b94,True
+2026-05-31,원종우,기타,chore: 불필요한 파일 삭제,80c2ce6,False
+2026-05-31,원종우,기능 개발,"feat(websocket): STOMP CONNECT 프레임 기반 JWT 인증 인터셉터 추가
+
+- 클라이언트가 WebSocket 연결(STOMP CONNECT)을 시도할 때 Authorization 헤더의 JWT를 가로채어 검증하는 ChannelInterceptor 구현체 추가
+- 인증 실패 시 MessagingException을 발생시켜 미인증 사용자의 소켓 연결 원천 차단",69472e0,False
+2026-05-31,원종우,버그 수정,"fix(websocket): STOMP CONNECT 프레임 기반 JWT 인증 도입으로 연결 거부 버그 수정
+
+- [Backend] HTTP Handshake가 아닌 STOMP CONNECT 시점에 Authorization 헤더를 가로채어 JWT를 검증하는 WebSocketAuthInterceptor(ChannelInterceptor) 추가
+- [Backend] SecurityConfig에서 /ws/** 경로의 HTTP 접근은 허용하되, Inbound 채널 인터셉터를 통해 보안을 유지하도록 설정 변경 (CORS 설정 외부화 포함)
+- [Frontend] websocket.ts에서 STOMP 연결 시 헤더(connectHeaders)에 JWT 토큰을 포함하여 전송하도록 수정",ae11001,False
+2026-05-31,원종우,구조 개선,"refactor(member): MemberService 팀 구조 연동 및 WebSocket 트랜잭션 동기화
+
+- 초대 코드 생성(generateInviteCode) 및 팀 합류(joinTeam) 로직을 기존 managerId 기반에서 Team 엔티티 기반으로 개편
+- 팀 합류 시 발송되는 WebSocket 알림을 TransactionSynchronizationManager.afterCommit() 단계로 지연시켜, DB 트랜잭션 롤백 시 잘못된 알림이 발송되는 버그 수정
+- 로그인 로직의 예외 메시지를 통일하여 사용자 열거(User Enumeration) 공격 방어",750d0e3,False
+2026-05-31,원종우,기능 개발,"feat(team): 팀 생성/삭제 API 분리 및 프론트엔드 상태 동기화 완비
+
+- [Backend] TeamController 및 TeamService에 팀 직접 생성(초대 코드 동시 발급), 관리자 소유 팀 목록 조회(my-teams), 팀 삭제 API 추가
+- [Backend] MemberService의 joinTeam 로직을 개선하여 WebSocket 발송 시점을 Transaction 이후(afterCommit)로 안전하게 지연
+- [Frontend] CreateTeamModal에서 createTeamFromServer 함수를 호출하여 서버 DB와 로컬 상태(localStorage)가 완벽히 동기화되도록 개편",d6e66b7,False
 2026-05-31,원종우,기능 개발,"feat(exception): 도메인별 커스텀 예외 추가 및 GlobalExceptionHandler 고도화
 
 - 존재하지 않는 리소스 조회를 위한 ResourceNotFoundException (404) 추가
 - 권한 없는 접근 방어를 위한 UnauthorizedAccessException (403) 추가
 - 중복 출근 처리를 위한 AlreadyClockedInException (409) 추가
 - 동시성 이슈(Race Condition)로 인한 DB 유니크 제약 위반 방어를 위해 DataIntegrityViolationException (409) 핸들러 추가",85cadd3,False
-2026-05-31,원종우,기능 개발,"feat(team): 팀 생성/삭제 API 분리 및 프론트엔드 상태 동기화 완비
+2026-05-31,dldnwls07,기타,chore: remove obsolete documentation and project planning files,c7a438b,False
+2026-05-31,원종우,구조 개선,"refactor(domain): 워크로그/상태/알림 도메인 리팩토링 및 쿼리 최적화
 
-- [Backend] TeamController 및 TeamService에 팀 직접 생성(초대 코드 동시 발급), 관리자 소유 팀 목록 조회(my-teams), 팀 삭제 API 추가
-- [Backend] MemberService의 joinTeam 로직을 개선하여 WebSocket 발송 시점을 Transaction 이후(afterCommit)로 안전하게 지연
-- [Frontend] CreateTeamModal에서 createTeamFromServer 함수를 호출하여 서버 DB와 로컬 상태(localStorage)가 완벽히 동기화되도록 개편",d6e66b7,False
-2026-05-31,원종우,구조 개선,"refactor(chat): 채팅방 구조 개선 및 동시성(Race Condition) 방어 로직 구현
+- WorkLog 엔티티에 당일 중복 출근 방지용 유니크 제약조건(member_id, work_date) 추가 및 WorkLogService 로직 간소화
+- NotificationRepository에 bulkMarkAllAsRead() 쿼리를 추가하여 전체 읽음 처리 시 발생하는 N+1 UPDATE 쿼리 성능 이슈 해결
+- MemberStatusRepository의 쿼리를 teamId 기반으로 변경하여 관리자 본인의 상태도 정상적으로 조회되도록 수정
+- application.yaml에 CORS allowed-origins 속성 외부화 반영",8d620e7,False
+2026-05-31,원종우,문서 작업,"새 브렌치 변경사항 기준 기존 브랜치와의 통합
+- docs 디렉토리 내의 3 영역 (프론트, 백, ai)에 새 브랜치 (docs/specifications)와 통합",198679d,False
+2026-05-29,원종우,구조 개선,"refactor(member): 초대 코드 및 팀 가입 로직 Team 엔티티 기반으로 개편
 
-- ChatRoom 엔티티의 managerId 컬럼을 teamId로 변경하고, DB 유니크 제약조건(member1_id, member2_id) 추가
-- ChatService에 DataIntegrityViolationException 예외 복구 로직을 추가하여 DIRECT 채팅방 동시 생성 요청 시 발생하는 중복 버그 방어
-- TEAM 채팅방 메시지 브로드캐스트 시 Member N+1 쿼리 문제를 해결하기 위해 findActiveMemberIds 최적화 적용",07487b0,False
-2026-05-31,원종우,버그 수정,"fix(websocket): STOMP CONNECT 프레임 기반 JWT 인증 도입으로 연결 거부 버그 수정
+- InviteCode 엔티티가 managerId 대신 Team 엔티티를 참조하도록 수정
+- MemberService의 generateInviteCode() 및 joinTeam() 로직을 새로운 팀 구조에 맞게 변경
+- 웹소켓 발송 시 팀 정보(teamId 등)를 포함하도록 개선",aacfe28,False
+2026-05-29,원종우,기능 개발,"feat(team): 독립적인 Team 엔티티 도입 및 Member 연관관계 매핑
 
-- [Backend] HTTP Handshake가 아닌 STOMP CONNECT 시점에 Authorization 헤더를 가로채어 JWT를 검증하는 WebSocketAuthInterceptor(ChannelInterceptor) 추가
-- [Backend] SecurityConfig에서 /ws/** 경로의 HTTP 접근은 허용하되, Inbound 채널 인터셉터를 통해 보안을 유지하도록 설정 변경 (CORS 설정 외부화 포함)
-- [Frontend] websocket.ts에서 STOMP 연결 시 헤더(connectHeaders)에 JWT 토큰을 포함하여 전송하도록 수정",ae11001,False
-2026-05-31,원종우,기능 개발,"feat(websocket): STOMP CONNECT 프레임 기반 JWT 인증 인터셉터 추가
+- 기존 managerId 기반 팀 식별 구조에서 발생하는 조인 버그 해결
+- 독립적인 Team 엔티티 신규 추가 및 Member와 N:1 연관관계 설정
+- Team 도메인 관련 Controller, Service, Repository 생성 및 수정
+- MemberRepository에 teamId 기반 조회 메서드 추가",3fe0131,False
+2026-05-29,dldnwls07,기타,메시지기능 조그 fix,536ea5c,False
+2026-05-29,dldnwls07,구조 개선,transition WebSocket topics and team-related operations from manager-based IDs to team-specific IDs,5fe1a5f,False
+2026-05-29,dldnwls07,버그 수정,clear scoped team and member data from local storage on logout,1babe96,False
+2026-05-29,원종우,구조 개선,"refactor(team): 팀 구조를 managerId 기반에서 독립적인 Team 엔티티 기반으로 개편
 
-- 클라이언트가 WebSocket 연결(STOMP CONNECT)을 시도할 때 Authorization 헤더의 JWT를 가로채어 검증하는 ChannelInterceptor 구현체 추가
-- 인증 실패 시 MessagingException을 발생시켜 미인증 사용자의 소켓 연결 원천 차단",69472e0,False
-2026-05-31,원종우,구조 개선,"refactor(member): MemberService 팀 구조 연동 및 WebSocket 트랜잭션 동기화
+- TeamService 내 팀 조회 로직을 managerId 대신 teamId를 사용하도록 변경
+- getMyTeam() 메서드에서 직원이 속한 Team 엔티티를 통해 관리자 정보를 가져오도록 수정
+- getTeamMembers() 메서드에서 요청자의 권한(Manager/Employee)에 따른 팀 접근 권한 검증 로직 추가 및 teamId 기반 조회로 변경
+- TeamRepository 의존성 추가",4124232,False
+2026-05-29,원종우,구조 개선,"refactor(domain): 스탠드업, 미팅, 상태, 근무 기록 도메인 팀 구조 전환
 
-- 초대 코드 생성(generateInviteCode) 및 팀 합류(joinTeam) 로직을 기존 managerId 기반에서 Team 엔티티 기반으로 개편
-- 팀 합류 시 발송되는 WebSocket 알림을 TransactionSynchronizationManager.afterCommit() 단계로 지연시켜, DB 트랜잭션 롤백 시 잘못된 알림이 발송되는 버그 수정
-- 로그인 로직의 예외 메시지를 통일하여 사용자 열거(User Enumeration) 공격 방어",750d0e3,False
-2026-05-31,원종우,기타,chore: 불필요한 파일 삭제,80c2ce6,False
-2026-05-31,dldnwls07,기타,"Merge pull request #9 from Jongwoo0101/chat_frontend
+- Repository 계층: 팀 단위 조회를 위한 JPQL 쿼리 조건 변경 (m.managerId -> m.team.id 등)
+- Service 계층: 웹소켓 브로드캐스트 토픽 주소를 /topic/team/{teamId} 로 통일
+- 미팅룸 생성, 팀 상태 조회 등 핵심 비즈니스 로직에 새로운 팀 검증 로직 적용",5f19ee5,False
+2026-05-29,원종우,구조 개선,"refactor(chat): 채팅방 생성, 검증 및 조회 로직을 Team 기준으로 변경
 
-Refactor: 팀 도메인 독립 구조(Team Entity) 개편 및 전역 예외/웹소켓 인증 고도화",ff38b94,True
-2026-05-29,dldnwls07,구조 개선,"remove mockData dependency, consolidate constants, and remove local fallback logic for team creation",6ac6b9b,False
-2026-05-29,dldnwls07,기능 개발,implement support for team chat rooms alongside direct messaging in the frontend and backend,ce691e2,False
-2026-05-29,원종우,기타,"Merge remote-tracking branch 'origin/Jongwoo0101' into chat_frontend
-
-# Conflicts:
-#	backend/src/main/java/com/worksight/api/controller/ChatController.java
-#	backend/src/main/java/com/worksight/api/dto/ChatDto.java
-#	backend/src/main/java/com/worksight/api/entity/ChatMessage.java
-#	backend/src/main/java/com/worksight/api/entity/ChatRoom.java
-#	backend/src/main/java/com/worksight/api/service/ChatService.java",c41945b,False
+- ChatRoom 엔티티의 managerId 컬럼을 teamId로 변경
+- ChatRoomRepository의 JPQL 쿼리 파라미터를 teamId로 수정
+- ChatService 내 같은 팀 여부 검증 및 웹소켓 브로드캐스트 로직 개편",9836b70,False
+2026-05-29,dldnwls07,구조 개선,remove redundant local storage cleanup logic from team storage utility,eeb5365,False
+2026-05-29,dldnwls07,기능 개발,implement modular dashboard components for employee and manager views,1e3c5fd,False
+2026-05-29,dldnwls07,기타,Merge commit '68c0f7f74324a6f766ee56d6e25ac1e100ea84e5' into chat_frontend,d197e94,False
+2026-05-29,dldnwls07,기타,ㅇㅇ,b707d8c,False
+2026-05-29,원종우,버그 수정,ChatRoom tnwjd,68c0f7f,False
 2026-05-29,원종우,기능 개발,"1:1 및 팀 채팅방 기능 구현
 
 - ChatRoom: roomType(DIRECT/TEAM), managerId 필드 추가
@@ -68,64 +102,47 @@ Refactor: 팀 도메인 독립 구조(Team Entity) 개편 및 전역 예외/웹�
 
 - ChatController: 팀 채팅방 입장 엔드포인트 추가
   POST /api/chat/rooms/{roomId}/team/enter",efdd227,False
-2026-05-29,원종우,버그 수정,ChatRoom tnwjd,68c0f7f,False
-2026-05-29,dldnwls07,기타,ㅇㅇ,b707d8c,False
-2026-05-29,dldnwls07,기타,Merge commit '68c0f7f74324a6f766ee56d6e25ac1e100ea84e5' into chat_frontend,d197e94,False
-2026-05-29,dldnwls07,구조 개선,remove redundant local storage cleanup logic from team storage utility,eeb5365,False
-2026-05-29,dldnwls07,기능 개발,implement modular dashboard components for employee and manager views,1e3c5fd,False
-2026-05-29,원종우,구조 개선,"refactor(member): 초대 코드 및 팀 가입 로직 Team 엔티티 기반으로 개편
+2026-05-29,원종우,기타,"Merge remote-tracking branch 'origin/Jongwoo0101' into chat_frontend
 
-- InviteCode 엔티티가 managerId 대신 Team 엔티티를 참조하도록 수정
-- MemberService의 generateInviteCode() 및 joinTeam() 로직을 새로운 팀 구조에 맞게 변경
-- 웹소켓 발송 시 팀 정보(teamId 등)를 포함하도록 개선",aacfe28,False
-2026-05-29,원종우,구조 개선,"refactor(chat): 채팅방 생성, 검증 및 조회 로직을 Team 기준으로 변경
+# Conflicts:
+#	backend/src/main/java/com/worksight/api/controller/ChatController.java
+#	backend/src/main/java/com/worksight/api/dto/ChatDto.java
+#	backend/src/main/java/com/worksight/api/entity/ChatMessage.java
+#	backend/src/main/java/com/worksight/api/entity/ChatRoom.java
+#	backend/src/main/java/com/worksight/api/service/ChatService.java",c41945b,False
+2026-05-29,dldnwls07,기능 개발,implement support for team chat rooms alongside direct messaging in the frontend and backend,ce691e2,False
+2026-05-29,dldnwls07,구조 개선,"remove mockData dependency, consolidate constants, and remove local fallback logic for team creation",6ac6b9b,False
+2026-05-28,원종우,기능 개발,"feat(chat): 팀 채팅 비즈니스 로직 및 API 엔드포인트 구현
 
-- ChatRoom 엔티티의 managerId 컬럼을 teamId로 변경
-- ChatRoomRepository의 JPQL 쿼리 파라미터를 teamId로 수정
-- ChatService 내 같은 팀 여부 검증 및 웹소켓 브로드캐스트 로직 개편",9836b70,False
-2026-05-29,원종우,구조 개선,"refactor(domain): 스탠드업, 미팅, 상태, 근무 기록 도메인 팀 구조 전환
+- ChatService에 DIRECT+TEAM 통합 목록 조회, 팀방 생성 및 합류 로직 추가
+- ChatRoomParticipant의 lastReadAt을 활용한 팀 채팅 읽음 처리 구현
+- ChatController 라우팅을 /direct와 /team 기반으로 명확하게 리팩토링
+- 중첩 레코드 import 와일드카드 컴파일 오류 수정 및 최적화",54cbc7f,False
+2026-05-28,원종우,기능 개발,"feat(chat): 팀 채팅 지원을 위한 Repository 및 DTO 확장
 
-- Repository 계층: 팀 단위 조회를 위한 JPQL 쿼리 조건 변경 (m.managerId -> m.team.id 등)
-- Service 계층: 웹소켓 브로드캐스트 토픽 주소를 /topic/team/{teamId} 로 통일
-- 미팅룸 생성, 팀 상태 조회 등 핵심 비즈니스 로직에 새로운 팀 검증 로직 적용",5f19ee5,False
-2026-05-29,원종우,구조 개선,"refactor(team): 팀 구조를 managerId 기반에서 독립적인 Team 엔티티 기반으로 개편
+- ChatRoomRepository에 팀 채팅방 및 참여방 조회 JPQL 쿼리 구현
+- ChatMessageRepository에 DIRECT 전용 메서드명 명확화 리팩토링
+- ChatRoomParticipantRepository에 lastReadAt 기반 팀 미읽음 카운트 쿼리 구현
+- ChatDto 및 WsEnvelope에 팀 채팅용 응답 레코드(Record) 및 웹소켓 이벤트 추가",8b8652f,False
+2026-05-28,dldnwls07,기타,chore: ignore local logs directory in root in addition to src/logs/,1ca12f2,False
+2026-05-28,원종우,문서 작업,api명세서 업데이트,a7eb2f6,False
+2026-05-28,dldnwls07,구조 개선,simplify chat service logic by delegating stream handling to the message processor,1c798cf,False
+2026-05-28,dldnwls07,기능 개발,add clear alerts button to dashboard and update message store to reset unread counts on room selection,a20ea13,False
+2026-05-28,원종우,기능 개발,"feat(chat): 1:1 및 팀 채팅 통합을 위한 도메인 모델 구축
 
-- TeamService 내 팀 조회 로직을 managerId 대신 teamId를 사용하도록 변경
-- getMyTeam() 메서드에서 직원이 속한 Team 엔티티를 통해 관리자 정보를 가져오도록 수정
-- getTeamMembers() 메서드에서 요청자의 권한(Manager/Employee)에 따른 팀 접근 권한 검증 로직 추가 및 teamId 기반 조회로 변경
-- TeamRepository 의존성 추가",4124232,False
-2026-05-29,dldnwls07,버그 수정,clear scoped team and member data from local storage on logout,1babe96,False
-2026-05-29,dldnwls07,구조 개선,transition WebSocket topics and team-related operations from manager-based IDs to team-specific IDs,5fe1a5f,False
-2026-05-29,dldnwls07,기타,메시지기능 조그 fix,536ea5c,False
-2026-05-29,원종우,기능 개발,"feat(team): 독립적인 Team 엔티티 도입 및 Member 연관관계 매핑
+- ChatRoomType 이넘(DIRECT, TEAM) 추가
+- ChatRoom 엔티티에 타입별 복합 유니크 제약조건 및 빌더 분리 구현
+- TEAM 채팅 관리를 위한 ChatRoomParticipant 엔티티 신규 추가
+- ChatMessage 엔티티 내 DIRECT 전용 읽음 처리 속성 주석화 및 명확화",57b310c,False
+2026-05-28,dldnwls07,버그 수정,"send CHAT_READ event to self to clear unread badge immediately
 
-- 기존 managerId 기반 팀 식별 구조에서 발생하는 조인 버그 해결
-- 독립적인 Team 엔티티 신규 추가 및 Member와 N:1 연관관계 설정
-- Team 도메인 관련 Controller, Service, Repository 생성 및 수정
-- MemberRepository에 teamId 기반 조회 메서드 추가",3fe0131,False
-2026-05-28,dldnwls07,기능 개발,add real-time unread message counter to messaging dashboard,64105ae,False
-2026-05-28,070128o,기타,fighting!!,7ca94ea,False
-2026-05-28,원종우,기타,chore: ChatRoom.java에서 주석에서 불필요한 공백제거2,c655cee,False
-2026-05-28,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,0b2aaba,False
-2026-05-28,원종우,기타,Merge remote-tracking branch 'origin/Jongwoo0101' into Jongwoo0101,b496f98,False
-2026-05-28,원종우,기능 개발,"feat(chat): 채팅 관련 Repository 및 WebSocket 이벤트 상수 추가
-
-- ChatRoomRepository: 멤버 ID 기반 채팅방 조회 및 단건 조회 쿼리 추가
-- ChatMessageRepository: 최신 메시지 페이징 조회, 미읽음 카운트 및 일괄 읽음 처리(@Modifying) 쿼리 구현
-- WsEnvelope: 실시간 채팅 수신 및 읽음 처리를 위한 웹소켓 이벤트 상수(CHAT_MESSAGE_RECEIVED, CHAT_URGENT_RECEIVED, CHAT_READ) 정의",f779f37,False
-2026-05-28,원종우,기타,chore: 주석에서 불필요한 공백제거,587296c,False
-2026-05-28,원종우,기능 개발,"feat(chat): 채팅 도메인 엔티티 및 관련 Enum 정의
-
-- 1:1 채팅방 엔티티(ChatRoom) 및 unique 제약 조건을 활용한 중복 생성 방지 로직 추가
-- 채팅 메시지 엔티티(ChatMessage) 정의 및 인덱스 추가
-- 일반(NORMAL) 및 긴급(URGENT) 메시지 구분을 위한 ChatMessageType Enum 추가",e78e425,False
-2026-05-28,원종우,기능 개발,"feat(chat): 채팅 비즈니스 로직(Service) 및 API 컨트롤러 구현
-
-- ChatService: 채팅방 입장/목록 조회, 메시지 전송, 미읽음 일괄 처리 로직 구현
-- 수신자 상태(MEETING/AWAY)에 따른 일반/긴급 알림 발송 분기 및 배너 조회 API 구현
-- 데이터 정합성을 위해 TransactionSynchronization(afterCommit)을 활용한 웹소켓 실시간 푸시 연동
-- ChatController: 채팅 관련 REST API 엔드포인트 매핑",3752000,False
-2026-05-28,dldnwls07,기능 개발,"redesign messaging architecture to support real-time chat, room-specific state, and urgent message integration",891828a,False
+- Backend: notifyReadAfterCommit now sends CHAT_READ to both the sender
+  (who sent the messages) and the reader (who just read them), so the
+  reader's own unread badge clears via WebSocket without waiting for
+  a page refresh or API re-fetch.
+- Frontend: markMessagesAsRead comment updated to clarify bidirectional
+  read handling (me reading = clear sender's messages, sender reading =
+  clear my messages). unreadCount: 0 is always applied on CHAT_READ.",6b33e7d,False
 2026-05-28,dldnwls07,버그 수정,"resolve infinite loading spinner in MessageRoom
 
 Root causes fixed:
@@ -145,37 +162,46 @@ Root causes fixed:
 4. Removed setActiveRoom/setBannerInfo from useEffect deps (not needed
    since they are stable zustand actions).",cc29235,False
 2026-05-28,dldnwls07,기타,chore: remove logs directory from git tracking,110fc3b,False
-2026-05-28,원종우,기능 개발,"feat(chat): 팀 채팅 지원을 위한 Repository 및 DTO 확장
+2026-05-28,dldnwls07,기능 개발,add real-time unread message counter to messaging dashboard,64105ae,False
+2026-05-28,dldnwls07,기능 개발,"redesign messaging architecture to support real-time chat, room-specific state, and urgent message integration",891828a,False
+2026-05-28,원종우,기능 개발,"feat(chat): 채팅 도메인 엔티티 및 관련 Enum 정의
 
-- ChatRoomRepository에 팀 채팅방 및 참여방 조회 JPQL 쿼리 구현
-- ChatMessageRepository에 DIRECT 전용 메서드명 명확화 리팩토링
-- ChatRoomParticipantRepository에 lastReadAt 기반 팀 미읽음 카운트 쿼리 구현
-- ChatDto 및 WsEnvelope에 팀 채팅용 응답 레코드(Record) 및 웹소켓 이벤트 추가",8b8652f,False
-2026-05-28,dldnwls07,기타,chore: ignore local logs directory in root in addition to src/logs/,1ca12f2,False
-2026-05-28,원종우,문서 작업,api명세서 업데이트,a7eb2f6,False
-2026-05-28,원종우,기능 개발,"feat(chat): 팀 채팅 비즈니스 로직 및 API 엔드포인트 구현
+- 1:1 채팅방 엔티티(ChatRoom) 및 unique 제약 조건을 활용한 중복 생성 방지 로직 추가
+- 채팅 메시지 엔티티(ChatMessage) 정의 및 인덱스 추가
+- 일반(NORMAL) 및 긴급(URGENT) 메시지 구분을 위한 ChatMessageType Enum 추가",e78e425,False
+2026-05-28,원종우,기타,chore: 주석에서 불필요한 공백제거,587296c,False
+2026-05-28,원종우,기능 개발,"feat(chat): 채팅 관련 Repository 및 WebSocket 이벤트 상수 추가
 
-- ChatService에 DIRECT+TEAM 통합 목록 조회, 팀방 생성 및 합류 로직 추가
-- ChatRoomParticipant의 lastReadAt을 활용한 팀 채팅 읽음 처리 구현
-- ChatController 라우팅을 /direct와 /team 기반으로 명확하게 리팩토링
-- 중첩 레코드 import 와일드카드 컴파일 오류 수정 및 최적화",54cbc7f,False
-2026-05-28,dldnwls07,기능 개발,add clear alerts button to dashboard and update message store to reset unread counts on room selection,a20ea13,False
-2026-05-28,원종우,기능 개발,"feat(chat): 1:1 및 팀 채팅 통합을 위한 도메인 모델 구축
+- ChatRoomRepository: 멤버 ID 기반 채팅방 조회 및 단건 조회 쿼리 추가
+- ChatMessageRepository: 최신 메시지 페이징 조회, 미읽음 카운트 및 일괄 읽음 처리(@Modifying) 쿼리 구현
+- WsEnvelope: 실시간 채팅 수신 및 읽음 처리를 위한 웹소켓 이벤트 상수(CHAT_MESSAGE_RECEIVED, CHAT_URGENT_RECEIVED, CHAT_READ) 정의",f779f37,False
+2026-05-28,원종우,기타,Merge remote-tracking branch 'origin/Jongwoo0101' into Jongwoo0101,b496f98,False
+2026-05-28,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,0b2aaba,False
+2026-05-28,원종우,기타,chore: ChatRoom.java에서 주석에서 불필요한 공백제거2,c655cee,False
+2026-05-28,070128o,기타,fighting!!,7ca94ea,False
+2026-05-28,원종우,기능 개발,"feat(chat): 채팅 비즈니스 로직(Service) 및 API 컨트롤러 구현
 
-- ChatRoomType 이넘(DIRECT, TEAM) 추가
-- ChatRoom 엔티티에 타입별 복합 유니크 제약조건 및 빌더 분리 구현
-- TEAM 채팅 관리를 위한 ChatRoomParticipant 엔티티 신규 추가
-- ChatMessage 엔티티 내 DIRECT 전용 읽음 처리 속성 주석화 및 명확화",57b310c,False
-2026-05-28,dldnwls07,버그 수정,"send CHAT_READ event to self to clear unread badge immediately
-
-- Backend: notifyReadAfterCommit now sends CHAT_READ to both the sender
-  (who sent the messages) and the reader (who just read them), so the
-  reader's own unread badge clears via WebSocket without waiting for
-  a page refresh or API re-fetch.
-- Frontend: markMessagesAsRead comment updated to clarify bidirectional
-  read handling (me reading = clear sender's messages, sender reading =
-  clear my messages). unreadCount: 0 is always applied on CHAT_READ.",6b33e7d,False
-2026-05-28,dldnwls07,구조 개선,simplify chat service logic by delegating stream handling to the message processor,1c798cf,False
+- ChatService: 채팅방 입장/목록 조회, 메시지 전송, 미읽음 일괄 처리 로직 구현
+- 수신자 상태(MEETING/AWAY)에 따른 일반/긴급 알림 발송 분기 및 배너 조회 API 구현
+- 데이터 정합성을 위해 TransactionSynchronization(afterCommit)을 활용한 웹소켓 실시간 푸시 연동
+- ChatController: 채팅 관련 REST API 엔드포인트 매핑",3752000,False
+2026-05-27,dldnwls07,버그 수정,update TeamController to handle empty search results correctly,4bfb8a3,False
+2026-05-27,070128o,기타,work woojin!! hurry up,734943d,False
+2026-05-27,070128o,기타,work woojin!!,65fcc69,False
+2026-05-27,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,2231f0b,False
+2026-05-27,070128o,기타,last dance(feat.배경훈교수님),215374f,False
+2026-05-27,dldnwls07,기타,Merge branch 'feature/scoped-storage-fix' into jongwoo0101,64a16cb,False
+2026-05-27,dldnwls07,기능 개발,implement idle-based status auto-transition and simplify AI state classifier logic,e85e25f,False
+2026-05-27,dldnwls07,버그 수정,narrow user.id null check in EmployeeViewContent,fbe8f26,False
+2026-05-27,070128o,기타,last commit (feat.BIGBANG),b8c98b4,False
+2026-05-27,dldnwls07,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into jongwoo0101,c134d11,False
+2026-05-27,dldnwls07,버그 수정,fix(team): allow employees to fetch team members for video call invites,b2adca3,False
+2026-05-27,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,e2690ea,False
+2026-05-27,dldnwls07,버그 수정,fix(meeting): add UI overlay for invitations and fix join request event filter,5772126,False
+2026-05-27,dldnwls07,버그 수정,fix(meeting-room): allow JOIN_REQUESTED ws event & optimistically update UI on invite,05c060f,False
+2026-05-27,dldnwls07,버그 수정,remove unused vi import in videoCallStore.test.ts,24052ad,False
+2026-05-27,dldnwls07,기능 개발,implement team-based websocket subscription and manager role support in meeting room controller,7696896,False
+2026-05-27,dldnwls07,버그 수정,resolve blank screen issue after joining team by fixing reference error in useMeetingRoomController,05297f8,False
 2026-05-27,dldnwls07,버그 수정,"Zustand persist 다중 사용자 로컬스토리지 격리 및 회의실 도메인 리팩토링
 
 - userScopedStorage.ts: 사용자별 동적 키({baseKey}:{userId}) 스토리지 어댑터 구현
@@ -189,29 +215,12 @@ Root causes fixed:
 
 검증: npx tsc --noEmit + npm run build 통과",11df629,False
 2026-05-27,dldnwls07,버그 수정,use selector for syncMemberContext to fix ts errors and resolve lint warnings,7df2daa,False
-2026-05-27,dldnwls07,버그 수정,fix(team): allow employees to fetch team members for video call invites,b2adca3,False
-2026-05-27,dldnwls07,버그 수정,resolve blank screen issue after joining team by fixing reference error in useMeetingRoomController,05297f8,False
-2026-05-27,dldnwls07,기능 개발,implement team-based websocket subscription and manager role support in meeting room controller,7696896,False
-2026-05-27,dldnwls07,버그 수정,remove unused vi import in videoCallStore.test.ts,24052ad,False
-2026-05-27,dldnwls07,버그 수정,fix(meeting-room): allow JOIN_REQUESTED ws event & optimistically update UI on invite,05c060f,False
-2026-05-27,dldnwls07,버그 수정,fix(meeting): add UI overlay for invitations and fix join request event filter,5772126,False
 2026-05-27,dldnwls07,기타,chore: add gstack skill routing rules to CLAUDE.md,66bf0e3,False
-2026-05-27,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,e2690ea,False
-2026-05-27,070128o,기타,last dance(feat.배경훈교수님),215374f,False
-2026-05-27,dldnwls07,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into jongwoo0101,c134d11,False
-2026-05-27,070128o,기타,work woojin!! hurry up,734943d,False
-2026-05-27,070128o,기타,work woojin!!,65fcc69,False
-2026-05-27,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,2231f0b,False
-2026-05-27,dldnwls07,버그 수정,update TeamController to handle empty search results correctly,4bfb8a3,False
-2026-05-27,dldnwls07,기타,Merge branch 'feature/scoped-storage-fix' into jongwoo0101,64a16cb,False
-2026-05-27,dldnwls07,기능 개발,implement idle-based status auto-transition and simplify AI state classifier logic,e85e25f,False
-2026-05-27,dldnwls07,버그 수정,narrow user.id null check in EmployeeViewContent,fbe8f26,False
-2026-05-27,070128o,기타,last commit (feat.BIGBANG),b8c98b4,False
-2026-05-24,원종우,테스트,just for commit bot test. ignore this commit 22,5f60a31,False
 2026-05-24,원종우,기타,"Merge pull request #6 from Jongwoo0101/feature/frontend-refactor-and-bugfix
 
  resolve frontend spec issues and fix shared state bug",223e97a,True
 2026-05-24,원종우,테스트,just for commit bot test. ignore this commit,67f2b12,False
+2026-05-24,원종우,테스트,just for commit bot test. ignore this commit 22,5f60a31,False
 2026-05-23,dldnwls07,기능 개발,include participantId in meeting notifications and refactor team store selectors for improved reactivity,ffd89bd,False
 2026-05-23,dldnwls07,버그 수정,recover commute state drift when backend worklog is reset,2771b01,False
 2026-05-23,원종우,버그 수정,"SecurityConfig.java @Value 제거
@@ -243,9 +252,52 @@ localhost:5173 하드코딩 유지. 대신 새 API 경로들(/api/meetings/**, /
 - 인메모리(ConcurrentHashMap) 기반 초대 코드 저장을 DB 엔티티(`InviteCode`)로 마이그레이션하여 서버 재시작 시 데이터 유지
 - 초대 코드 1회성 사용을 위한 `markAsUsed()` 비즈니스 로직 및 검증 추가
 - 초대 코드 만료 시간(expiration-seconds)을 application.yaml에서 주입받도록 환경변수 처리 개선",2b80052,False
-2026-05-21,dldnwls07,기타,chore: enable strict mode in frontend TypeScript configuration,7206c4f,False
-2026-05-21,dldnwls07,구조 개선,simplify joinRoom signature and optimize media stream management in video calls,4ca0b48,False
 2026-05-21,dldnwls07,구조 개선,centralize status UI settings and update dashboard WebSocket event handling,0814df8,False
+2026-05-21,dldnwls07,구조 개선,simplify joinRoom signature and optimize media stream management in video calls,4ca0b48,False
+2026-05-21,dldnwls07,기타,chore: enable strict mode in frontend TypeScript configuration,7206c4f,False
+2026-05-20,dldnwls07,기능 개발,align AI model and frontend with backend StatusType (WORKING/MEETING/BREAK) and remove SMARTPHONE/SLEEP,36133d1,False
+2026-05-20,원종우,기타,chore: StatusService.java 주석 수정,09192c4,False
+2026-05-20,070128o,기타,it will mabye...last..commit??,256c63b,False
+2026-05-20,원종우,구조 개선,Role.java 경로를 enums 패키지로 이동,7f2e18c,False
+2026-05-20,원종우,기타,chore: package-lock.json 수정,4e67038,False
+2026-05-20,원종우,문서 작업,api 명세서 수정,8c72b97,False
+2026-05-20,원종우,구조 개선,status-api-test.http 경로 변경,3180609,False
+2026-05-20,원종우,기능 개발,"미팅룸 생성, 초대/참가 요청 및 실시간 이벤트 연동 기능 구현
+
+- MeetingRoom 및 MeetingParticipant 엔티티 설계 (초대 및 참여 요청 일원화 관리)
+- 미팅룸 생성 및 참여(수락) 시 해당 회원의 상태를 MEETING으로 자동 변경하는 로직 구현
+- 미팅룸 종료 및 퇴장 시 회원의 상태를 WORKING으로 복귀 처리
+- 중복 참여 요청 방지 및 주최자 권한 검증 등 도메인 유효성 로직 추가
+- 팀 전체 브로드캐스트 및 개인별 WebSocket 실시간 알림 기능 적용
+- 미팅룸 생성/상세조회/참가/초대/종료/퇴장 관련 REST API 구현",65b3319,False
+2026-05-20,원종우,기타,chore: StatusType.java 주석 수정,eeea85e,False
+2026-05-20,dldnwls07,기타,chore: 참조 끊어진 MonitoringServiceTest.java 삭제 및 테스트 빌드 정상화,e5978d3,False
+2026-05-20,dldnwls07,기타,merge: origin/Jongwoo0101 브랜치의 신규 백엔드 상태 관리 API 연동 반영,f9834bd,False
+2026-05-20,dldnwls07,문서 작업,TODO.md 갱신 (Jongwoo0101 브랜치 병합 내역 추가),e98baf7,False
+2026-05-20,dldnwls07,기타,"chore: origin/Jongwoo0101 브랜치의 test.css, test.html, test.js 파일 복원",ec2f075,False
+2026-05-20,070128o,기타,<기획>commit im sorry,f2cba2c,False
+2026-05-20,원종우,기능 개발,"데일리 스탠드업(목표/결과 작성) 기능 구현 및 실시간 연동
+
+- DailyStandup 엔티티 설계 (member_id + standupDate 유니크 제약 적용)
+- 하루 시작 시 '오늘의 목표(Goal)' 생성 및 재호출 시 수정 기능 구현
+- 하루 종료 시 '오늘의 결과(Result)' 작성 기능 구현 및 목표 선작성 유효성 체크 추가
+- 내 오늘 스탠드업 조회 및 팀 전체 특정 날짜 스탠드업 조회 API 구현
+- TransactionSynchronization을 활용한 목표/결과 업데이트 시 팀별 웹소켓 실시간 브로드캐스트 적용
+- 기능 검증용 HTTP API 테스트 스크립트(.http) 작성",e35c560,False
+2026-05-20,원종우,기타,chore: MemberStatusDto.java 주석 수정,fc82f2f,False
+2026-05-20,dldnwls07,기능 개발,initialize project dependencies and add smart-away system plan documentation,fae9c84,False
+2026-05-20,원종우,기능 개발,"알림(Notification) 기능 구현 및 실시간 웹소켓 푸시 추가
+
+- 일반 알림(GENERAL) 및 중요 알림(IMPORTANT) 도메인 설계
+- 중요 알림은 수신자가 WORKING/MEETING 상태일 때만 발송 가능하도록 유효성 검증 추가
+- 트랜잭션 커밋 후 SimpMessagingTemplate을 활용한 WebSocket 실시간 푸시 발송
+- 알림 전체/단건 조회, 읽지 않은 알림 수(Badge용) 및 읽음 처리 API 구현
+- API 검증을 위한 HTTP 테스트 스크립트(.http) 작성",d386bf7,False
+2026-05-20,070128o,기타,<기획>보완,31323a2,False
+2026-05-20,원종우,기타,chore: status-api-test.http 내에 오타 수정,426131e,False
+2026-05-20,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,b571a15,False
+2026-05-20,dldnwls07,기능 개발,"feat(frontend): fix commute check-in bug, enable strict mode, and add stores",185c1f1,False
+2026-05-20,070128o,기타,plan.txt 파일 수정,c421ea3,False
 2026-05-20,070128o,기타,commit test,3c73f17,False
 2026-05-20,원종우,구조 개선,"모니터링 기반 근태 시스템 제거
 
@@ -270,7 +322,8 @@ localhost:5173 하드코딩 유지. 대신 새 API 경로들(/api/meetings/**, /
 - GET /api/status/team/{managerId}: 팀 전체 상태 조회
 - 상태 변경 시 WebSocket 브로드캐스트 포함",077973c,False
 2026-05-20,원종우,문서 작업,명세서 수정,209a4f5,False
-2026-05-20,070128o,기타,plan.txt 파일 수정,c421ea3,False
+2026-05-20,원종우,기능 개발,"신규 엔드포인트 반영
+WebSocketConfig.java",37c1f34,False
 2026-05-20,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,822e9ed,False
 2026-05-20,070128o,기타,찐찐찐막입니다..,10379e7,False
 2026-05-20,dldnwls07,기타,Merge branch 'frontend' into Jongwoo0101,deb9562,False
@@ -280,50 +333,6 @@ localhost:5173 하드코딩 유지. 대신 새 API 경로들(/api/meetings/**, /
 2026-05-20,원종우,기타,chore: Member.java 가상머니 삭제,1d013c9,False
 2026-05-20,원종우,기타,chore: WorksightApiApplicationTests.java 삭제,2464818,False
 2026-05-20,dldnwls07,기능 개발,v2.0 API 연동 및 Option B Fallback 탑재 완료,2fad780,False
-2026-05-20,원종우,기능 개발,"신규 엔드포인트 반영
-WebSocketConfig.java",37c1f34,False
-2026-05-20,dldnwls07,기능 개발,"feat(frontend): fix commute check-in bug, enable strict mode, and add stores",185c1f1,False
-2026-05-20,dldnwls07,기능 개발,initialize project dependencies and add smart-away system plan documentation,fae9c84,False
-2026-05-20,원종우,기타,chore: status-api-test.http 내에 오타 수정,426131e,False
-2026-05-20,원종우,기타,chore: StatusService.java 주석 수정,09192c4,False
-2026-05-20,070128o,기타,it will mabye...last..commit??,256c63b,False
-2026-05-20,원종우,구조 개선,Role.java 경로를 enums 패키지로 이동,7f2e18c,False
-2026-05-20,원종우,기타,chore: package-lock.json 수정,4e67038,False
-2026-05-20,원종우,문서 작업,api 명세서 수정,8c72b97,False
-2026-05-20,원종우,구조 개선,status-api-test.http 경로 변경,3180609,False
-2026-05-20,원종우,기능 개발,"미팅룸 생성, 초대/참가 요청 및 실시간 이벤트 연동 기능 구현
-
-- MeetingRoom 및 MeetingParticipant 엔티티 설계 (초대 및 참여 요청 일원화 관리)
-- 미팅룸 생성 및 참여(수락) 시 해당 회원의 상태를 MEETING으로 자동 변경하는 로직 구현
-- 미팅룸 종료 및 퇴장 시 회원의 상태를 WORKING으로 복귀 처리
-- 중복 참여 요청 방지 및 주최자 권한 검증 등 도메인 유효성 로직 추가
-- 팀 전체 브로드캐스트 및 개인별 WebSocket 실시간 알림 기능 적용
-- 미팅룸 생성/상세조회/참가/초대/종료/퇴장 관련 REST API 구현",65b3319,False
-2026-05-20,원종우,기타,chore: StatusType.java 주석 수정,eeea85e,False
-2026-05-20,dldnwls07,기능 개발,align AI model and frontend with backend StatusType (WORKING/MEETING/BREAK) and remove SMARTPHONE/SLEEP,36133d1,False
-2026-05-20,dldnwls07,기타,chore: 참조 끊어진 MonitoringServiceTest.java 삭제 및 테스트 빌드 정상화,e5978d3,False
-2026-05-20,dldnwls07,문서 작업,TODO.md 갱신 (Jongwoo0101 브랜치 병합 내역 추가),e98baf7,False
-2026-05-20,dldnwls07,기타,"chore: origin/Jongwoo0101 브랜치의 test.css, test.html, test.js 파일 복원",ec2f075,False
-2026-05-20,070128o,기타,<기획>commit im sorry,f2cba2c,False
-2026-05-20,원종우,기능 개발,"데일리 스탠드업(목표/결과 작성) 기능 구현 및 실시간 연동
-
-- DailyStandup 엔티티 설계 (member_id + standupDate 유니크 제약 적용)
-- 하루 시작 시 '오늘의 목표(Goal)' 생성 및 재호출 시 수정 기능 구현
-- 하루 종료 시 '오늘의 결과(Result)' 작성 기능 구현 및 목표 선작성 유효성 체크 추가
-- 내 오늘 스탠드업 조회 및 팀 전체 특정 날짜 스탠드업 조회 API 구현
-- TransactionSynchronization을 활용한 목표/결과 업데이트 시 팀별 웹소켓 실시간 브로드캐스트 적용
-- 기능 검증용 HTTP API 테스트 스크립트(.http) 작성",e35c560,False
-2026-05-20,원종우,기타,chore: MemberStatusDto.java 주석 수정,fc82f2f,False
-2026-05-20,070128o,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,b571a15,False
-2026-05-20,원종우,기능 개발,"알림(Notification) 기능 구현 및 실시간 웹소켓 푸시 추가
-
-- 일반 알림(GENERAL) 및 중요 알림(IMPORTANT) 도메인 설계
-- 중요 알림은 수신자가 WORKING/MEETING 상태일 때만 발송 가능하도록 유효성 검증 추가
-- 트랜잭션 커밋 후 SimpMessagingTemplate을 활용한 WebSocket 실시간 푸시 발송
-- 알림 전체/단건 조회, 읽지 않은 알림 수(Badge용) 및 읽음 처리 API 구현
-- API 검증을 위한 HTTP 테스트 스크립트(.http) 작성",d386bf7,False
-2026-05-20,070128o,기타,<기획>보완,31323a2,False
-2026-05-20,dldnwls07,기타,merge: origin/Jongwoo0101 브랜치의 신규 백엔드 상태 관리 API 연동 반영,f9834bd,False
 2026-05-15,070128o,문서 작업,"plan.txt 수정
 기획완료",46c1fd8,False
 2026-05-14,070128o,문서 작업,plan.txt 수정,39a1def,False
@@ -338,24 +347,107 @@ WebSocketConfig.java",37c1f34,False
 - alert 생성 시 confidence 일관성 확보
   event.getConfidence() 대신 normalizeConfidence() 재사용",fc6a569,False
 2026-05-14,원종우,기타,Merge branch 'Jongwoo0101' of https://github.com/Jongwoo0101/genai-team-project into Jongwoo0101,301de3d,False
-2026-05-13,dldnwls07,버그 수정,fix(frontend): resolve useEffect dependency cycle in EmployeeView,0a5ad10,False
-2026-05-13,070128o,문서 작업,계획서 수정,8e50acb,False
-2026-05-13,dldnwls07,기능 개발,integrate AI monitoring with WebSocket,255a879,False
-2026-05-13,원종우,기타,chore: application.yaml 오타수정,6560364,False
-2026-05-13,dldnwls07,기능 개발,"팀 스토리지 유틸리티 구현, 모니터링 서비스 유닛 테스트 추가, AI 모델 환경 문제 해결",7fd2ee8,False
-2026-05-13,원종우,기타,"chore: application.yaml 오타수정, api명세서 재정의",f013b7e,False
 2026-05-13,dldnwls07,버그 수정,fix(frontend): add token to authStore to fix EmployeeView hook,d08cc5c,False
-2026-05-13,dldnwls07,기타,branch-test,93899c6,False
-2026-05-13,dldnwls07,버그 수정,fix(frontend): use type-only import in useMonitorWS,06db34f,False
-2026-05-13,dldnwls07,구조 개선,refactor(frontend): clean up useMonitorWS hook and remove redundant stop logic,c115c7c,False
+2026-05-13,dldnwls07,버그 수정,fix(ai_model): lock mediapipe version and create server,bcab1ef,False
 2026-05-13,070128o,문서 작업,"plan.txt 수정
 <수정중>수정중",b9eacf6,False
-2026-05-13,dldnwls07,버그 수정,fix(ai_model): lock mediapipe version and create server,bcab1ef,False
+2026-05-13,dldnwls07,버그 수정,fix(frontend): use type-only import in useMonitorWS,06db34f,False
+2026-05-13,dldnwls07,기타,branch-test,93899c6,False
+2026-05-13,dldnwls07,구조 개선,refactor(frontend): clean up useMonitorWS hook and remove redundant stop logic,c115c7c,False
+2026-05-13,원종우,기타,"chore: application.yaml 오타수정, api명세서 재정의",f013b7e,False
+2026-05-13,dldnwls07,기능 개발,integrate AI monitoring with WebSocket,255a879,False
+2026-05-13,dldnwls07,기능 개발,"팀 스토리지 유틸리티 구현, 모니터링 서비스 유닛 테스트 추가, AI 모델 환경 문제 해결",7fd2ee8,False
+2026-05-13,070128o,문서 작업,계획서 수정,8e50acb,False
+2026-05-13,dldnwls07,버그 수정,fix(frontend): resolve useEffect dependency cycle in EmployeeView,0a5ad10,False
+2026-05-13,원종우,기타,chore: application.yaml 오타수정,6560364,False
 2026-05-12,원종우,기타,"Merge pull request #5 from Jongwoo0101/frontend
 
  백엔드 보안 설정 수정 및 프론트엔드 실시간 DB 연동 고도화",461e7b7,True
 2026-05-10,dldnwls07,버그 수정,백엔드 보안 설정 수정 및 프론트엔드 실시간 DB 연동 고도화,e14c53d,False
 2026-05-10,원종우,기타,chore: Spring Security 및 Hibernate 로그 설정 수정,e688cea,False
+2026-05-08,원종우,기타,"Merge pull request #4 from Jongwoo0101/frontend
+
+아래 3개 모두 완료
+POST /api/teams : 실제 팀(Team) 테이블 Entity 생성
+GET /api/teams/my-team : 직원이 로그인 시 자신이 소속된 팀 조회
+GET /api/teams/{id}/members : 관리자가 자신의 팀에 소속된 직원 목록 조회",d4e9af5,True
+2026-05-08,원종우,문서 작업,"API 명세서 최신화
+
+- 팀 API, 초대 코드 API, 토큰 재발급 API 추가
+- 공통 에러 응답 형식 추가
+- WebSocket 구독 경로 및 TEAM_LINKED 이벤트 명세 추가
+- 보안 설정 및 전체 흐름 업데이트",76fdacf,False
+2026-05-08,원종우,버그 수정,"MonitoringService 존재하지 않는 직원 조회 시 404 반환하도록 수정
+
+- IllegalArgumentException → NoSuchElementException으로 변경
+- GlobalExceptionHandler의 404 핸들러와 연동",b04984c,False
+2026-05-08,dldnwls07,기능 개발,"백엔드 API 규격 동기화 (토큰 필드명 및 초대 코드 형식 반영)
+
+- LoginResponse: accessToken -> token 필드명 변경 대응
+- authStore: token 및 refreshToken 저장 로직 업데이트
+- JoinTeam: WS-XXXX-XXXX 형식의 초대 코드 지원 및 UI 최적화
+- api: 초대 코드 생성 시 불필요한 바디 전송 제거
+- teamStore: 백엔드와 동일한 코드 생성 형식(WS-XXXX-XXXX) 적용",8c4de72,False
+2026-05-08,원종우,기타,push rebase,ab12b59,False
+2026-05-08,dldnwls07,버그 수정,팀 참여 시 서버 에러 메시지가 로컬 폴백 메시지에 가려지는 문제 수정,3f21eaa,False
+2026-05-08,원종우,기능 개발,"초대 코드 기반 팀 매핑 API 구현
+
+- MemberDto: LoginResponse token 필드명 수정 (accessToken → token),
+  InviteCodeResponse · JoinTeamRequest 레코드 추가
+- MemberService: 초대 코드 생성/검증/무효화 로직 구현
+  (ConcurrentHashMap in-memory 저장, 5분 만료, 일회성)
+  팀 매핑 완료 후 WebSocket TEAM_LINKED 이벤트 전송
+  joinTeam()에서 영속성 컨텍스트 보장을 위해 DB 재조회 처리
+- MemberController: POST /invite-code (MANAGER), POST /join-team (EMPLOYEE) 추가",26f546a,False
+2026-05-08,원종우,기능 개발,"Member에 managerId 필드 및 팀 매핑 메서드 추가
+
+- managerId 필드 추가 (팀 매핑용)
+- linkManager(Long managerId) 메서드 추가
+- getManagerId() 명시적 getter 추가 (UserDetails 충돌 방지)
+- MemberRepository에 findAllByManagerId() 쿼리 메서드 추가",301661f,False
+2026-05-08,원종우,기능 개발,"GlobalExceptionHandler에 404, 409 예외 핸들러 추가
+
+- NoSuchElementException → 404 NOT_FOUND 처리 (존재하지 않는 직원 ID)
+- IllegalStateException → 409 INVALID_STATE 처리 (팀 미소속 상태)
+- AccessDeniedException → 403 ACCESS_DENIED 처리",239e7dc,False
+2026-05-08,원종우,기타,"chore: JWT 만료 시간 연장 및 테스트 API 파일 업데이트
+
+- application.yaml: jwt.expiration 24시간으로 변경 (개발 편의)
+- test-api.http: 초대 코드 플로우, 팀 조회, 에러 케이스 테스트 추가",734d54c,False
+2026-05-08,dldnwls07,기능 개발,개발 편의를 위한 데이터 초기화 버튼 추가 (백엔드 재시작 시 동기화 용도),fc03f79,False
+2026-05-08,원종우,기능 개발,"초대 코드 기반 팀 매핑 API 구현 및 인증/예외 처리 개선
+
+- Member: managerId 필드 및 linkManager() 메서드 추가
+- MemberDto: LoginResponse 토큰 필드명 수정 (accessToken → token),
+  InviteCodeResponse · JoinTeamRequest 레코드 추가
+- MemberController: POST /invite-code (MANAGER), POST /join-team (EMPLOYEE) 엔드포인트 추가
+- MemberService: 초대 코드 생성/검증/무효화 로직 구현 (ConcurrentHashMap, 5분 만료),
+  팀 매핑 후 WebSocket TEAM_LINKED 이벤트 전송
+- MonitoringService: 존재하지 않는 직원 조회 시 NoSuchElementException으로 변경
+- GlobalExceptionHandler: 404 (NoSuchElementException) 핸들러 추가
+- SecurityConfig: 401/403 응답 핸들러 명시적 분리,
+  invite-code · join-team 경로 authenticated() 추가로 미인증 시 401 보장
+- test-api.http: 초대 코드 플로우 및 에러 케이스 테스트 추가",fee7784,False
+2026-05-08,원종우,기능 개발,"팀 조회 API 구현 (TeamController, TeamService, TeamDto)
+
+- TeamDto: MyTeamResponse, TeamMemberResponse 레코드 추가
+- TeamService: getMyTeam() - EMPLOYEE 소속 팀(관리자 정보) 조회
+              getTeamMembers() - MANAGER 팀 소속 직원 목록 조회
+              본인 팀 외 조회 시도 시 400 반환
+- TeamController: GET /teams/my-team (EMPLOYEE)
+                  GET /teams/{managerId}/members (MANAGER) 추가",aadefbc,False
+2026-05-08,원종우,구조 개선,"JwtAuthenticationFilter에서 UserDetailsService 제거 및 MemberRepository 직접 주입
+
+- 만료/무효 토큰이 헤더에 포함된 요청도 예외 없이 안전하게 통과하도록 수정
+- loadUserByUsername 대신 memberRepository.findById().ifPresent()로 변경
+- 회원가입 시 기존 토큰이 헤더에 있어도 500 에러 발생하지 않도록 픽스",6ccbfcd,False
+2026-05-08,원종우,기능 개발,"SecurityConfig 401/403 응답 분리 및 인증 경로 명시
+
+- authenticationEntryPoint 추가로 미인증 요청 → 401 반환
+- accessDeniedHandler 추가로 권한 부족 요청 → 403 반환
+- invite-code, join-team 경로 authenticated() 명시로 미인증 시 401 보장
+- UserDetailsService → MemberRepository 주입으로 변경
+- @EnableMethodSecurity 추가",83dd30a,False
 2026-05-08,dldnwls07,버그 수정,"팀 참여 및 생성 시 프론트엔드의 사파리 호환성 및 조용한 에러 처리(Silent Failure) 문제 해결
 
 1. api.ts:
@@ -372,101 +464,9 @@ WebSocketConfig.java",37c1f34,False
 
 4. MemberService.java:
    - joinTeam 시 메모리에만 저장하고 DB에 반영하지 않던 치명적 버그 수정 (memberRepository.save 누락 추가)",6608319,False
-2026-05-08,원종우,구조 개선,"JwtAuthenticationFilter에서 UserDetailsService 제거 및 MemberRepository 직접 주입
-
-- 만료/무효 토큰이 헤더에 포함된 요청도 예외 없이 안전하게 통과하도록 수정
-- loadUserByUsername 대신 memberRepository.findById().ifPresent()로 변경
-- 회원가입 시 기존 토큰이 헤더에 있어도 500 에러 발생하지 않도록 픽스",6ccbfcd,False
-2026-05-08,원종우,기능 개발,"SecurityConfig 401/403 응답 분리 및 인증 경로 명시
-
-- authenticationEntryPoint 추가로 미인증 요청 → 401 반환
-- accessDeniedHandler 추가로 권한 부족 요청 → 403 반환
-- invite-code, join-team 경로 authenticated() 명시로 미인증 시 401 보장
-- UserDetailsService → MemberRepository 주입으로 변경
-- @EnableMethodSecurity 추가",83dd30a,False
-2026-05-08,원종우,기능 개발,"초대 코드 기반 팀 매핑 API 구현 및 인증/예외 처리 개선
-
-- Member: managerId 필드 및 linkManager() 메서드 추가
-- MemberDto: LoginResponse 토큰 필드명 수정 (accessToken → token),
-  InviteCodeResponse · JoinTeamRequest 레코드 추가
-- MemberController: POST /invite-code (MANAGER), POST /join-team (EMPLOYEE) 엔드포인트 추가
-- MemberService: 초대 코드 생성/검증/무효화 로직 구현 (ConcurrentHashMap, 5분 만료),
-  팀 매핑 후 WebSocket TEAM_LINKED 이벤트 전송
-- MonitoringService: 존재하지 않는 직원 조회 시 NoSuchElementException으로 변경
-- GlobalExceptionHandler: 404 (NoSuchElementException) 핸들러 추가
-- SecurityConfig: 401/403 응답 핸들러 명시적 분리,
-  invite-code · join-team 경로 authenticated() 추가로 미인증 시 401 보장
-- test-api.http: 초대 코드 플로우 및 에러 케이스 테스트 추가",fee7784,False
 2026-05-08,원종우,문서 작업,api 명세서 수정,2f31a96,False
 2026-05-08,dldnwls07,기타,chore: add debug logs for 403 analysis and fix frontend login UX/fallback,227cec9,False
 2026-05-08,dldnwls07,기능 개발,fix team join sync bug and add real-time cross-tab sync,45b8558,False
-2026-05-08,원종우,기능 개발,"팀 조회 API 구현 (TeamController, TeamService, TeamDto)
-
-- TeamDto: MyTeamResponse, TeamMemberResponse 레코드 추가
-- TeamService: getMyTeam() - EMPLOYEE 소속 팀(관리자 정보) 조회
-              getTeamMembers() - MANAGER 팀 소속 직원 목록 조회
-              본인 팀 외 조회 시도 시 400 반환
-- TeamController: GET /teams/my-team (EMPLOYEE)
-                  GET /teams/{managerId}/members (MANAGER) 추가",aadefbc,False
-2026-05-08,dldnwls07,기능 개발,개발 편의를 위한 데이터 초기화 버튼 추가 (백엔드 재시작 시 동기화 용도),fc03f79,False
-2026-05-08,원종우,기타,"chore: JWT 만료 시간 연장 및 테스트 API 파일 업데이트
-
-- application.yaml: jwt.expiration 24시간으로 변경 (개발 편의)
-- test-api.http: 초대 코드 플로우, 팀 조회, 에러 케이스 테스트 추가",734d54c,False
-2026-05-08,원종우,기능 개발,"GlobalExceptionHandler에 404, 409 예외 핸들러 추가
-
-- NoSuchElementException → 404 NOT_FOUND 처리 (존재하지 않는 직원 ID)
-- IllegalStateException → 409 INVALID_STATE 처리 (팀 미소속 상태)
-- AccessDeniedException → 403 ACCESS_DENIED 처리",239e7dc,False
-2026-05-08,원종우,기능 개발,"Member에 managerId 필드 및 팀 매핑 메서드 추가
-
-- managerId 필드 추가 (팀 매핑용)
-- linkManager(Long managerId) 메서드 추가
-- getManagerId() 명시적 getter 추가 (UserDetails 충돌 방지)
-- MemberRepository에 findAllByManagerId() 쿼리 메서드 추가",301661f,False
-2026-05-08,원종우,기능 개발,"초대 코드 기반 팀 매핑 API 구현
-
-- MemberDto: LoginResponse token 필드명 수정 (accessToken → token),
-  InviteCodeResponse · JoinTeamRequest 레코드 추가
-- MemberService: 초대 코드 생성/검증/무효화 로직 구현
-  (ConcurrentHashMap in-memory 저장, 5분 만료, 일회성)
-  팀 매핑 완료 후 WebSocket TEAM_LINKED 이벤트 전송
-  joinTeam()에서 영속성 컨텍스트 보장을 위해 DB 재조회 처리
-- MemberController: POST /invite-code (MANAGER), POST /join-team (EMPLOYEE) 추가",26f546a,False
-2026-05-08,dldnwls07,버그 수정,팀 참여 시 서버 에러 메시지가 로컬 폴백 메시지에 가려지는 문제 수정,3f21eaa,False
-2026-05-08,원종우,기타,push rebase,ab12b59,False
-2026-05-08,dldnwls07,기능 개발,"백엔드 API 규격 동기화 (토큰 필드명 및 초대 코드 형식 반영)
-
-- LoginResponse: accessToken -> token 필드명 변경 대응
-- authStore: token 및 refreshToken 저장 로직 업데이트
-- JoinTeam: WS-XXXX-XXXX 형식의 초대 코드 지원 및 UI 최적화
-- api: 초대 코드 생성 시 불필요한 바디 전송 제거
-- teamStore: 백엔드와 동일한 코드 생성 형식(WS-XXXX-XXXX) 적용",8c4de72,False
-2026-05-08,원종우,버그 수정,"MonitoringService 존재하지 않는 직원 조회 시 404 반환하도록 수정
-
-- IllegalArgumentException → NoSuchElementException으로 변경
-- GlobalExceptionHandler의 404 핸들러와 연동",b04984c,False
-2026-05-08,원종우,문서 작업,"API 명세서 최신화
-
-- 팀 API, 초대 코드 API, 토큰 재발급 API 추가
-- 공통 에러 응답 형식 추가
-- WebSocket 구독 경로 및 TEAM_LINKED 이벤트 명세 추가
-- 보안 설정 및 전체 흐름 업데이트",76fdacf,False
-2026-05-08,원종우,기타,"Merge pull request #4 from Jongwoo0101/frontend
-
-아래 3개 모두 완료
-POST /api/teams : 실제 팀(Team) 테이블 Entity 생성
-GET /api/teams/my-team : 직원이 로그인 시 자신이 소속된 팀 조회
-GET /api/teams/{id}/members : 관리자가 자신의 팀에 소속된 직원 목록 조회",d4e9af5,True
-2026-05-07,dldnwls07,기능 개발,"팀 기반 관리 시스템 구현 및 사파리 호환성 개선
-
-- 관리자가 팀을 생성하고 초대 코드를 발급하는 기능 추가
-- 직원이 코드를 입력하여 팀에 합류하는 기능 추가
-- 팀별 모니터링 대시보드 구조 설계 (URL 파라미터 기반)
-- Safari 브라우저에서 fetch/JSON 패턴 에러 해결
-- 백엔드 응답 필드명(accessToken, virtualBalance) 동기화
-- zustand와 localStorage를 이용한 오프라인 폴백 시스템 구축
-- 미사용 InviteEmployeeModal 삭제",055aa6f,False
 2026-05-07,원종우,기타,"Merge pull request #3 from Jongwoo0101/frontend
 
 프론트엔드 수정 및 개선 확인 완료
@@ -482,18 +482,15 @@ GET /api/teams/{id}/members : 관리자가 자신의 팀에 소속된 직원 목
 - API 에러 핸들링 강화 (백엔드 미구현 시 사용자 친화적 메시지 출력)
 - 초대 코드 수동 취소 기능 추가",aecb64a,False
 2026-05-07,dldnwls07,버그 수정,merge base branch Jongwoo0101 and resolve conflicts in api.ts and authStore.ts,674461b,False
-2026-05-06,원종우,기능 개발,"feat(auth): refresh token DB 저장 및 재발급 구현
+2026-05-07,dldnwls07,기능 개발,"팀 기반 관리 시스템 구현 및 사파리 호환성 개선
 
-- RefreshToken 엔티티 추가 (memberId, token, expiresAt)
-- RefreshTokenRepository 추가
-- RefreshTokenService 추가 (저장/검증/rotate/삭제)",fd3fc85,False
-2026-05-06,원종우,구조 개선,"refactor(jwt): access/refresh 토큰 분리 및 subject를 userId로 변경
-
-- JwtProvider: generateAccessToken/generateRefreshToken 분리
-- subject를 username에서 userId(Long)로 변경
-- roles를 List 구조로 변경
-- secret key 최소 길이(32바이트) 검증 추가
-- token type(access/refresh) claim 추가",be160f1,False
+- 관리자가 팀을 생성하고 초대 코드를 발급하는 기능 추가
+- 직원이 코드를 입력하여 팀에 합류하는 기능 추가
+- 팀별 모니터링 대시보드 구조 설계 (URL 파라미터 기반)
+- Safari 브라우저에서 fetch/JSON 패턴 에러 해결
+- 백엔드 응답 필드명(accessToken, virtualBalance) 동기화
+- zustand와 localStorage를 이용한 오프라인 폴백 시스템 구축
+- 미사용 InviteEmployeeModal 삭제",055aa6f,False
 2026-05-06,원종우,기능 개발,"feat(member): 로그인 응답에 refresh token 추가 및 재발급 엔드포인트 구현
 
 - MemberDto: LoginResponse에 accessToken/refreshToken 분리, ReissueRequest 추가
@@ -504,6 +501,18 @@ GET /api/teams/{id}/members : 관리자가 자신의 팀에 소속된 직원 목
 
 - JwtAuthenticationFilter: access token 타입 검증 추가, userId 기반 인증으로 변경
 - CustomUserDetailsService: username 조회에서 id 조회로 변경",ea5a092,False
+2026-05-06,원종우,구조 개선,"refactor(jwt): access/refresh 토큰 분리 및 subject를 userId로 변경
+
+- JwtProvider: generateAccessToken/generateRefreshToken 분리
+- subject를 username에서 userId(Long)로 변경
+- roles를 List 구조로 변경
+- secret key 최소 길이(32바이트) 검증 추가
+- token type(access/refresh) claim 추가",be160f1,False
+2026-05-06,원종우,기능 개발,"feat(auth): refresh token DB 저장 및 재발급 구현
+
+- RefreshToken 엔티티 추가 (memberId, token, expiresAt)
+- RefreshTokenRepository 추가
+- RefreshTokenService 추가 (저장/검증/rotate/삭제)",fd3fc85,False
 2026-05-04,원종우,기타,"chore: jwt access token 유효기간 관련 자잘한 수정
 24시간 -> 30분",7f010bf,False
 2026-05-04,원종우,기능 개발,"JWT 기반 회원 인증 시스템 구현
@@ -534,17 +543,6 @@ GET /api/teams/{id}/members : 관리자가 자신의 팀에 소속된 직원 목
 - UserDetailsService 교체 예정 주석 추가
 - 불필요한 InMemoryUserDetailsManager Bean 임시 유지",bdd1cad,False
 2026-05-02,원종우,기타,chore: plan.txt -> md 로 변경,aea2703,False
-2026-04-30,dldnwls07,기타,chore: backup frontend local changes before backend folder sync,5b7bb89,False
-2026-04-30,원종우,기능 개발,"api 테스트 페이지 개선
-모든 api 정상작동 확인",bc84f43,False
-2026-04-30,dldnwls07,기타,"Merge pull request #1 from Jongwoo0101/backend
-
-Backend 설계, 구현 완료",557e53d,True
-2026-04-30,dldnwls07,기능 개발,sync backend folder with backend branch,ff0c0dc,False
-2026-04-30,원종우,기타,"Merge pull request #2 from Jongwoo0101/frontend
-
- backend 폴더 동기화 및 프론트엔드 로컬 변경사항 반영",047870a,True
-2026-04-30,원종우,기능 개발,"테스트 코드파일 경로 변경 + html, css, js 파일 분리",ab9fb71,False
 2026-04-30,원종우,기타,"pref: 중복 아이디 예외처리 추가
 + 에러메시지 로직 구현
 - 409: 이미사용중인 아이디
@@ -553,12 +551,56 @@ Backend 설계, 구현 완료",557e53d,True
 - 404: 존재하지 않는 계정
 - 400: 입력정보 다시 확인
 - 500: 서버오류",fb1f5dd,False
+2026-04-30,원종우,기타,Merge remote-tracking branch 'origin/frontend' into backend,31c3e9e,False
+2026-04-30,dldnwls07,기타,pipline fix,7e3f25d,False
 2026-04-30,원종우,기능 개발,"test-api.http api 테스트 추가
 - 이상 상태 보고 테스트
 - 다양한 이상 상태 테스트
 - 정상 상태 보고 테스트",9b04774,False
-2026-04-30,dldnwls07,기타,pipline fix,7e3f25d,False
-2026-04-30,원종우,기타,Merge remote-tracking branch 'origin/frontend' into backend,31c3e9e,False
+2026-04-30,원종우,기능 개발,"테스트 코드파일 경로 변경 + html, css, js 파일 분리",ab9fb71,False
+2026-04-30,원종우,기타,"Merge pull request #2 from Jongwoo0101/frontend
+
+ backend 폴더 동기화 및 프론트엔드 로컬 변경사항 반영",047870a,True
+2026-04-30,dldnwls07,기능 개발,sync backend folder with backend branch,ff0c0dc,False
+2026-04-30,dldnwls07,기타,"Merge pull request #1 from Jongwoo0101/backend
+
+Backend 설계, 구현 완료",557e53d,True
+2026-04-30,원종우,기능 개발,"api 테스트 페이지 개선
+모든 api 정상작동 확인",bc84f43,False
+2026-04-30,dldnwls07,기타,chore: backup frontend local changes before backend folder sync,5b7bb89,False
+2026-04-29,dldnwls07,기타,"프론트앤드개발계획서 및, 개발방향계획수정",ef101d2,False
+2026-04-29,dldnwls07,기타,style: 레이아웃 텍스트 겹침 수정 및 불필요한 에셋 정리,4ae07b7,False
+2026-04-29,원종우,테스트,"test.html: 회원가입, 로그인 api 테스트",658a53f,False
+2026-04-29,원종우,테스트,"test-api.http: 회원가입, 로그인 더미데이터로 테스트하기",496a9f0,False
+2026-04-29,원종우,기타,폴더명 재정의,7b05593,False
+2026-04-29,dldnwls07,기능 개발,"프론트엔드 뼈대 구축 완료 (Home, Login, EmployeeView, Dashboard) 및 Mock 데이터 연결",1d45732,False
+2026-04-29,dldnwls07,문서 작업,프론트엔드 작업 현황 리포트 추가 (코드 제외),7d3faf0,False
+2026-04-29,dldnwls07,기능 개발,백엔드 API 연동 및 웹소켓 실시간 알림 기능 구현,ca7d14d,False
+2026-04-29,dldnwls07,버그 수정,Vite 웹소켓 호환성 해결 및 DashboardStats 타입 에러 수정,dd57ad5,False
+2026-04-29,dldnwls07,기능 개발,실제 백엔드 인증 시스템 연동 및 API 프록시 설정 추가,c200bba,False
+2026-04-29,원종우,기타,"Role.java: 사용자 권한을 정의한 Enum (EMPLOYEE, MANAGER).",3b64822,False
+2026-04-29,원종우,기타,"MembersService.java: 회원 가입, 조회 등 핵심 비즈니스 로직 구현.",a67c5e2,False
+2026-04-29,원종우,기타,h2 콘솔 대소문자 관련 설정 해제,7ae3f6c,False
+2026-04-29,원종우,기타,WorkEventRepository.java: 업무 이벤트 데이터 접근을 위한 인터페이스.,d0ea172,False
+2026-04-29,dldnwls07,기능 개발,"프론트엔드 초기 아키텍처 설계 및 개발 환경 구축
+- React + Vite + TypeScript 기반 프로젝트 초기화
+- 주요 라이브러리 설치 (TailwindCSS, Zustand, React Router)
+- 페이지별 빈 파일 및 폴더 구조(pages, components, store, lib) 생성
+- 프론트엔드 개발 가이드라인(frontend_PipLine.md) 작성",2aa9134,False
+2026-04-29,원종우,기타,backend 내 test.txt 삭제,e038a87,False
+2026-04-29,원종우,기타,MonitoringController.java: 실시간 업무 상태 전송 및 기록을 위한 컨트롤러.,8f71819,False
+2026-04-29,원종우,기타,MonitoringDto.java: 모니터링 데이터 전송을 위한 DTO.,007cec6,False
+2026-04-29,원종우,기타,"EventType.java: 이벤트 종류를 정의한 Enum (NORMAL, AWAY, SLEEP 등).",b5fe1a1,False
+2026-04-29,원종우,기타,WorkEvent.java: 업무 중 발생하는 이벤트(상태 변경 등)를 기록하는 JPA 엔티티.,6fff1f2,False
+2026-04-29,원종우,기타,MemberController.java: 회원 관련 REST API 엔드포인트 구현.,6ae8113,False
+2026-04-29,원종우,기타,dir test,1f9e427,False
+2026-04-29,원종우,기타,add backend basic logic,d347752,False
+2026-04-29,원종우,기타,MemberRepository.java: DB 접근을 위한 Spring Data JPA 인터페이스.,cbaefd2,False
+2026-04-29,원종우,기타,MemberDto.java: API 통신에 사용되는 회원 데이터 전송 객체.,d93f580,False
+2026-04-29,dldnwls07,기타,Restore test.txt,e4112db,False
+2026-04-29,원종우,기타,MonitoringService.java: 업무 상태 기록 및 분석 로직.,87b6241,False
+2026-04-29,원종우,기타,"WorksightApiApplication.java
+메인 실행 클래스",1a6f6ac,False
 2026-04-29,원종우,기타,edit gitignore,d97fecd,False
 2026-04-29,dldnwls07,기능 개발,import worksight-api from backend branch,39b1196,False
 2026-04-29,원종우,기타,edit plan.txt,eca21fa,False
@@ -579,7 +621,6 @@ CSRF 비활성화, CORS허용, H2 콘솔 접근 및 API 경로별 권한 정의"
 2026-04-29,원종우,기타,add gitignore,32c467a,False
 2026-04-29,dldnwls07,기타,"chore: 백엔드 폴더 동기화 및 Git 설정 최적화 (node_modules, .vite 제외)",c6a3532,False
 2026-04-29,원종우,기타,edit ai-team-standards.md,5d1cefe,False
-2026-04-29,dldnwls07,기타,Restore test.txt,e4112db,False
 2026-04-29,dldnwls07,기타,Merge remote-tracking branch 'origin/Jongwoo0101' into Jongwoo0101,2aeb3fd,False
 2026-04-29,dldnwls07,기타,skills세팅 확인필요,3f7a79f,False
 2026-04-29,원종우,기타,delete test.txt,927d5b1,False
@@ -587,36 +628,4 @@ CSRF 비활성화, CORS허용, H2 콘솔 접근 및 API 경로별 권한 정의"
 2026-04-29,dldnwls07,기타,잘못올라간 이미지 삭제,2167919,False
 2026-04-29,dldnwls07,테스트,test commit,180a8d5,False
 2026-04-29,원종우,기타,api 명세서 작성,cbedf74,False
-2026-04-29,원종우,기타,"WorksightApiApplication.java
-메인 실행 클래스",1a6f6ac,False
-2026-04-29,원종우,기타,MonitoringService.java: 업무 상태 기록 및 분석 로직.,87b6241,False
-2026-04-29,원종우,기타,dir test,1f9e427,False
-2026-04-29,원종우,기타,MemberDto.java: API 통신에 사용되는 회원 데이터 전송 객체.,d93f580,False
-2026-04-29,dldnwls07,기타,style: 레이아웃 텍스트 겹침 수정 및 불필요한 에셋 정리,4ae07b7,False
-2026-04-29,원종우,테스트,"test.html: 회원가입, 로그인 api 테스트",658a53f,False
-2026-04-29,원종우,테스트,"test-api.http: 회원가입, 로그인 더미데이터로 테스트하기",496a9f0,False
-2026-04-29,원종우,기타,폴더명 재정의,7b05593,False
-2026-04-29,dldnwls07,기능 개발,"프론트엔드 뼈대 구축 완료 (Home, Login, EmployeeView, Dashboard) 및 Mock 데이터 연결",1d45732,False
-2026-04-29,dldnwls07,문서 작업,프론트엔드 작업 현황 리포트 추가 (코드 제외),7d3faf0,False
-2026-04-29,dldnwls07,기능 개발,백엔드 API 연동 및 웹소켓 실시간 알림 기능 구현,ca7d14d,False
-2026-04-29,dldnwls07,버그 수정,Vite 웹소켓 호환성 해결 및 DashboardStats 타입 에러 수정,dd57ad5,False
-2026-04-29,dldnwls07,기능 개발,실제 백엔드 인증 시스템 연동 및 API 프록시 설정 추가,c200bba,False
-2026-04-29,원종우,기타,"Role.java: 사용자 권한을 정의한 Enum (EMPLOYEE, MANAGER).",3b64822,False
-2026-04-29,dldnwls07,기타,"프론트앤드개발계획서 및, 개발방향계획수정",ef101d2,False
-2026-04-29,원종우,기타,h2 콘솔 대소문자 관련 설정 해제,7ae3f6c,False
-2026-04-29,원종우,기타,WorkEventRepository.java: 업무 이벤트 데이터 접근을 위한 인터페이스.,d0ea172,False
-2026-04-29,dldnwls07,기능 개발,"프론트엔드 초기 아키텍처 설계 및 개발 환경 구축
-- React + Vite + TypeScript 기반 프로젝트 초기화
-- 주요 라이브러리 설치 (TailwindCSS, Zustand, React Router)
-- 페이지별 빈 파일 및 폴더 구조(pages, components, store, lib) 생성
-- 프론트엔드 개발 가이드라인(frontend_PipLine.md) 작성",2aa9134,False
-2026-04-29,원종우,기타,backend 내 test.txt 삭제,e038a87,False
-2026-04-29,원종우,기타,MonitoringController.java: 실시간 업무 상태 전송 및 기록을 위한 컨트롤러.,8f71819,False
-2026-04-29,원종우,기타,MonitoringDto.java: 모니터링 데이터 전송을 위한 DTO.,007cec6,False
-2026-04-29,원종우,기타,"EventType.java: 이벤트 종류를 정의한 Enum (NORMAL, AWAY, SLEEP 등).",b5fe1a1,False
-2026-04-29,원종우,기타,WorkEvent.java: 업무 중 발생하는 이벤트(상태 변경 등)를 기록하는 JPA 엔티티.,6fff1f2,False
-2026-04-29,원종우,기타,MemberController.java: 회원 관련 REST API 엔드포인트 구현.,6ae8113,False
-2026-04-29,원종우,기타,"MembersService.java: 회원 가입, 조회 등 핵심 비즈니스 로직 구현.",a67c5e2,False
-2026-04-29,원종우,기타,add backend basic logic,d347752,False
-2026-04-29,원종우,기타,MemberRepository.java: DB 접근을 위한 Spring Data JPA 인터페이스.,cbaefd2,False
 2026-04-29,원종우,테스트,test commit,7b23978,False
